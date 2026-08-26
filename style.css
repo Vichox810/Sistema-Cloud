@@ -18,11 +18,26 @@ body {
     padding: 170px 20px 24px;
     color: var(--ink);
     font-family: Arial, sans-serif;
-    background-color: #e4f0eb;
+    background-color: #a9cbbc;
     background-image: url("logotipo-santo-tomas-horizontal_edited.png");
     background-position: center 26px;
     background-repeat: no-repeat;
     background-size: 125px;
+    animation: page-in 650ms ease-out both;
+}
+
+body::before {
+    content: "";
+    position: fixed;
+    top: 24px;
+    left: 50%;
+    width: 125px;
+    height: 125px;
+    pointer-events: none;
+    border-radius: 50%;
+    box-shadow: 0 8px 20px rgba(25, 112, 95, 0.12);
+    transform: translateX(-50%);
+    animation: logo-float 4s ease-in-out 700ms infinite;
 }
 
 body > h1,
@@ -46,6 +61,7 @@ h1 {
     font-size: 2.6rem;
     line-height: 1.1;
     color: var(--accent-dark);
+    animation: rise-in 600ms 100ms ease-out both;
 }
 
 h2 {
@@ -54,6 +70,7 @@ h2 {
     padding: 0 32px;
     font-size: 1.25rem;
     font-weight: 400;
+    animation: rise-in 600ms 180ms ease-out both;
 }
 
 p {
@@ -64,6 +81,7 @@ p {
     color: var(--muted);
     font-size: 1rem;
     line-height: 1.6;
+    animation: rise-in 600ms 260ms ease-out both;
 }
 
 button {
@@ -76,11 +94,19 @@ button {
     background: var(--accent);
     cursor: pointer;
     font-size: 1rem;
-    transition: background-color 150ms ease;
+    transition: background-color 150ms ease, transform 150ms ease, box-shadow 150ms ease;
+    animation: rise-in 600ms 340ms ease-out both;
 }
 
 button:hover {
     background: var(--accent-dark);
+    box-shadow: 0 7px 14px rgba(18, 85, 71, 0.22);
+    transform: translateY(-3px);
+}
+
+button:active {
+    box-shadow: none;
+    transform: translateY(0);
 }
 
 button:focus-visible {
@@ -106,5 +132,35 @@ button:focus-visible {
     p {
         padding-right: 0;
         padding-left: 0;
+    }
+}
+
+@keyframes page-in {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes rise-in {
+    from {
+        opacity: 0;
+        transform: translateY(14px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes logo-float {
+    0%,
+    100% {
+        transform: translateX(-50%) translateY(0);
+    }
+    50% {
+        transform: translateX(-50%) translateY(-5px);
     }
 }
