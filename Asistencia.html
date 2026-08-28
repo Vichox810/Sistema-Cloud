@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Asistencia | Cloud Computing</title>
+	<link rel="stylesheet" href="Asistencia.css">
+</head>
+<body>
+	<main class="attendance-card">
+		<header class="page-header">
+			<a class="back-link" href="index.html">Volver al inicio</a>
+			<p class="overline">Cloud Computing</p>
+			<h1>Registro de asistencia</h1>
+			<p class="intro">Completa los datos de la clase para guardar la asistencia.</p>
+		</header>
+
+		<form id="attendance-form">
+			<div class="field-group">
+				<label for="name">Nombre completo</label>
+				<input id="name" name="name" type="text" placeholder="Ej. Ana Pérez" autocomplete="name" required>
+			</div>
+
+			<div class="field-row">
+				<div class="field-group">
+					<label for="rut">RUT</label>
+					<input id="rut" name="rut" type="text" placeholder="12.345.678-9" autocomplete="off" required>
+				</div>
+				<div class="field-group">
+					<label for="date">Fecha</label>
+					<input id="date" name="date" type="date" required>
+				</div>
+			</div>
+
+			<div class="field-group">
+				<label for="time">Hora de ingreso</label>
+				<input id="time" name="time" type="time" required>
+			</div>
+
+			<fieldset class="attendance-fieldset">
+				<legend>¿Asistió a la clase?</legend>
+				<div class="attendance-options">
+					<label class="option">
+						<input type="radio" name="attendance" value="Si" required>
+						<span>Sí</span>
+					</label>
+					<label class="option">
+						<input type="radio" name="attendance" value="No">
+						<span>No</span>
+					</label>
+				</div>
+			</fieldset>
+
+			<button type="submit" id="save-button">Guardar asistencia</button>
+			<p id="form-message" class="form-message" role="status" aria-live="polite"></p>
+		</form>
+
+		<footer class="page-footer">
+			<span>Instituto Profesional Santo Tomás</span>
+			<span>Registro académico</span>
+		</footer>
+	</main>
+
+	<script type="module">
+		import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
+		import { getDatabase, push, ref, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
+
+		const firebaseConfig = {
+			apiKey: "AIzaSyA6u-ldnj5wqbChopg7MNbN89CobskXVhs",
+			authDomain: "sistema-en-la-nube.firebaseapp.com",
+			databaseURL: "https://sistema-en-la-nube-default-rtdb.firebaseio.com",
+			projectId: "sistema-en-la-nube",
+			storageBucket: "sistema-en-la-nube.firebasestorage.app",
+			messagingSenderId: "1026282374177",
+			appId: "1:1026282374177:web:2ac0512252161cd03e0f60",
+			measurementId: "G-WZM08T892M"
+		};
+
+		const app = initializeApp(firebaseConfig);
+		const database = getDatabase(app);
+		const form = document.querySelector("#attendance-form");
+		const message = document.querySelector("#form-message");
+		const saveButton = document.querySelector("#save-button");
+
+		form.addEventListener("submit", async (event) => {
+			event.preventDefault();
+			const formData = new FormData(form);
+
+			saveButton.disabled = true;
+			saveButton.textContent = "Guardando...";
+			message.textContent = "";
+			message.className = "form-message";
+
+			try {
+				await push(ref(database, "asistencias"), {
+					nombre: formData.get("name"),
+					rut: formData.get("rut"),
+					fecha: formData.get("date"),
+					hora: formData.get("time"),
+					asistencia: formData.get("attendance"),
+					creadoEn: serverTimestamp()
+				});
+
+				message.textContent = "La asistencia se guardó correctamente.";
+				message.className = "form-message success";
+				form.reset();
+			} catch (error) {
+				console.error("Error al guardar la asistencia:", error);
+				message.textContent = "No se pudo guardar. Revisa las reglas de Firebase.";
+				message.className = "form-message error";
+			} finally {
+				saveButton.disabled = false;
+				saveButton.textContent = "Guardar asistencia";
+			}
+		});
+	</script>
+</body>
+</html>
