@@ -55,6 +55,32 @@
 			<p id="form-message" class="form-message" role="status" aria-live="polite"></p>
 		</form>
 
+		<section class="records-section" aria-labelledby="records-title">
+			<div class="records-heading">
+				<div>
+					<p class="section-label">Historial</p>
+					<h2 id="records-title">Asistencias registradas</h2>
+				</div>
+				<span id="records-count">0 registros</span>
+			</div>
+			<div class="table-wrapper">
+				<table>
+					<thead>
+						<tr>
+							<th>Nombre</th>
+							<th>RUT</th>
+							<th>Fecha</th>
+							<th>Hora</th>
+							<th>Asistencia</th>
+						</tr>
+					</thead>
+					<tbody id="records-body">
+						<tr><td colspan="5" class="table-status">Cargando registros...</td></tr>
+					</tbody>
+				</table>
+			</div>
+		</section>
+
 		<footer class="page-footer">
 			<span>Instituto Profesional Santo Tomás</span>
 			<span>Registro académico</span>
@@ -63,7 +89,7 @@
 
 	<script type="module">
 		import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
-		import { getDatabase, push, ref, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
+		import { getDatabase, onValue, push, ref, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
 
 		const firebaseConfig = {
 			apiKey: "AIzaSyA6u-ldnj5wqbChopg7MNbN89CobskXVhs",
@@ -81,6 +107,39 @@
 		const form = document.querySelector("#attendance-form");
 		const message = document.querySelector("#form-message");
 		const saveButton = document.querySelector("#save-button");
+		const recordsBody = document.querySelector("#records-body");
+		const recordsCount = document.querySelector("#records-count");
+		const escapeHtml = (value) => String(value ?? "-").replace(/[&<>'"]/g, (character) => ({
+			"&": "&amp;",
+			"<": "&lt;",
+			">": "&gt;",
+			"'": "&#39;",
+			'"': "&quot;"
+		}[character]));
+
+		onValue(ref(database, "asistencias"), (snapshot) => {
+			const records = snapshot.val() || {};
+			const rows = Object.values(records).reverse();
+
+			recordsCount.textContent = `${rows.length} ${rows.length === 1 ? "registro" : "registros"}`;
+			if (rows.length === 0) {
+				recordsBody.innerHTML = '<tr><td colspan="5" class="table-status">Todavía no hay asistencias registradas.</td></tr>';
+				return;
+			}
+
+			recordsBody.innerHTML = rows.map((record) => `
+				<tr>
+					<td>${escapeHtml(record.nombre)}</td>
+					<td>${escapeHtml(record.rut)}</td>
+					<td>${escapeHtml(record.fecha)}</td>
+					<td>${escapeHtml(record.hora)}</td>
+					<td><span class="attendance-badge ${record.asistencia === "Si" ? "is-present" : "is-absent"}">${escapeHtml(record.asistencia)}</span></td>
+				</tr>
+			`).join("");
+		}, () => {
+			recordsCount.textContent = "Error";
+			recordsBody.innerHTML = '<tr><td colspan="5" class="table-status error">No se pudieron cargar los registros.</td></tr>';
+		});
 
 		form.addEventListener("submit", async (event) => {
 			event.preventDefault();
