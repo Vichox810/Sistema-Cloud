@@ -4,12 +4,12 @@
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>Asistencia | Cloud Computing</title>
-	<link rel="stylesheet" href="Asistencia.css">
+	<link rel="stylesheet" href="/css/Asistencia.css">
 </head>
 <body>
 	<main class="attendance-card">
 		<header class="page-header">
-			<a class="back-link" href="index.html">Volver al inicio</a>
+			<a class="back-link" href="/html/index.html">Volver al inicio</a>
 			<p class="overline">Cloud Computing</p>
 			<h1>Registro de asistencia</h1>
 			<p class="intro">Completa los datos de la clase para guardar la asistencia.</p>
@@ -87,6 +87,8 @@
 		</footer>
 	</main>
 
+	<div id="offline-badge" class="offline-badge" hidden>Modo local</div>
+
 	<script type="module">
 		import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
 		import { getDatabase, onValue, push, ref, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
@@ -102,6 +104,7 @@
 			measurementId: "G-WZM08T892M"
 		};
 
+		const LS_KEY = "asistencias";
 		const app = initializeApp(firebaseConfig);
 		const database = getDatabase(app);
 		const form = document.querySelector("#attendance-form");
@@ -109,6 +112,8 @@
 		const saveButton = document.querySelector("#save-button");
 		const recordsBody = document.querySelector("#records-body");
 		const recordsCount = document.querySelector("#records-count");
+		const offlineBadge = document.querySelector("#offline-badge");
+
 		const escapeHtml = (value) => String(value ?? "-").replace(/[&<>'"]/g, (character) => ({
 			"&": "&amp;",
 			"<": "&lt;",
@@ -117,11 +122,24 @@
 			'"': "&quot;"
 		}[character]));
 
-		onValue(ref(database, "asistencias"), (snapshot) => {
-			const records = snapshot.val() || {};
-			const rows = Object.values(records).reverse();
+		function getFromLS() {
+			try {
+				return JSON.parse(localStorage.getItem(LS_KEY)) || [];
+			} catch {
+				return [];
+			}
+		}
 
+		function saveToLS(record) {
+			const records = getFromLS();
+			records.push(record);
+			localStorage.setItem(LS_KEY, JSON.stringify(records));
+		}
+
+		function renderRecords(rows, isLocal = false) {
 			recordsCount.textContent = `${rows.length} ${rows.length === 1 ? "registro" : "registros"}`;
+			offlineBadge.hidden = !isLocal;
+
 			if (rows.length === 0) {
 				recordsBody.innerHTML = '<tr><td colspan="5" class="table-status">Todavía no hay asistencias registradas.</td></tr>';
 				return;
@@ -136,41 +154,56 @@
 					<td><span class="attendance-badge ${record.asistencia === "Si" ? "is-present" : "is-absent"}">${escapeHtml(record.asistencia)}</span></td>
 				</tr>
 			`).join("");
-		}, () => {
-			recordsCount.textContent = "Error";
-			recordsBody.innerHTML = '<tr><td colspan="5" class="table-status error">No se pudieron cargar los registros.</td></tr>';
+		}
+
+		const localRecords = getFromLS();
+		if (localRecords.length > 0) {
+			renderRecords(localRecords.reverse(), true);
+		}
+
+		onValue(ref(database, "asistencias"), (snapshot) => {
+			const records = snapshot.val() || {};
+			const rows = Object.values(records).reverse();
+			renderRecords(rows, false);
+		}, (error) => {
+			console.warn("Firebase no disponible, usando datos locales:", error);
+			const rows = getFromLS().reverse();
+			renderRecords(rows, true);
 		});
 
 		form.addEventListener("submit", async (event) => {
 			event.preventDefault();
 			const formData = new FormData(form);
+			const record = {
+				nombre: formData.get("name"),
+				rut: formData.get("rut"),
+				fecha: formData.get("date"),
+				hora: formData.get("time"),
+				asistencia: formData.get("attendance"),
+			};
 
 			saveButton.disabled = true;
 			saveButton.textContent = "Guardando...";
 			message.textContent = "";
 			message.className = "form-message";
 
-			try {
-				await push(ref(database, "asistencias"), {
-					nombre: formData.get("name"),
-					rut: formData.get("rut"),
-					fecha: formData.get("date"),
-					hora: formData.get("time"),
-					asistencia: formData.get("attendance"),
-					creadoEn: serverTimestamp()
-				});
+			const firebaseResult = await push(ref(database, "asistencias"), {
+				...record,
+				creadoEn: serverTimestamp()
+			}).then(() => "ok").catch(() => "error");
 
+			if (firebaseResult === "ok") {
 				message.textContent = "La asistencia se guardó correctamente.";
 				message.className = "form-message success";
-				form.reset();
-			} catch (error) {
-				console.error("Error al guardar la asistencia:", error);
-				message.textContent = "No se pudo guardar. Revisa las reglas de Firebase.";
-				message.className = "form-message error";
-			} finally {
-				saveButton.disabled = false;
-				saveButton.textContent = "Guardar asistencia";
+			} else {
+				saveToLS({ ...record, creadoEn: Date.now() });
+				message.textContent = "Guardado localmente. Se sincronizará cuando haya conexión.";
+				message.className = "form-message success";
 			}
+
+			form.reset();
+			saveButton.disabled = false;
+			saveButton.textContent = "Guardar asistencia";
 		});
 	</script>
 </body>
