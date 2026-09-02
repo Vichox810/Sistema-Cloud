@@ -19,7 +19,7 @@ body {
     color: var(--ink);
     font-family: Arial, sans-serif;
     background-color: #a9cbbc;
-    background-image: url("logotipo-santo-tomas-horizontal_edited.png");
+    background-image: url("../img/logotipo-santo-tomas-horizontal_edited.png");
     background-position: center 26px;
     background-repeat: no-repeat;
     background-size: 125px;
